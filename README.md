@@ -59,6 +59,17 @@ $ slack-message-analysis collect --since 2020-05-25T12:23:34 --until 2020-06-01
 $ slack-message-analysis collect --until 2020-06-01T01:23:45
 ```
 
+### 発言数・リアクション数の多いユーザランキング、投稿数の多いチャンネルランキング、利用数の多いリアクション数ランキングを集計する
+
+```
+$ slack-message-analysis leaderboard --post <集計結果投稿先チャンネルID> --day   # 昨日
+$ slack-message-analysis leaderboard --post <集計結果投稿先チャンネルID> --week  # 先週
+$ slack-message-analysis leaderboard --post <集計結果投稿先チャンネルID> --since 2020-05-25 --until 2020-06-01
+```
+
+※発言を収集を同様に`--token`や`TOKEN`環境変数の指定が必要です。
+投稿せずに結果だけみたい場合は`--dry-run`を指定してください。
+
 ## 開発方法
 
 ### 静的チェック等

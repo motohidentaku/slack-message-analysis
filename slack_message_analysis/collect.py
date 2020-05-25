@@ -1,13 +1,12 @@
 from argparse import ArgumentParser, Namespace
 from functools import partial
-import os
 from typing import Any, Callable, Dict, Tuple, Union, List, TYPE_CHECKING
 import sys
 
-from slack import WebClient
 from slack.web.slack_response import SlackResponse
 
-from .common import setup_common_args, datetime_parser
+from .common import (
+    setup_common_args, setup_token_args, datetime_parser, create_slack_client)
 from .models import init_db, transaction, Channel, User, Message
 
 if TYPE_CHECKING:
@@ -15,11 +14,8 @@ if TYPE_CHECKING:
 
 
 def init_argparser(create_parser: Callable[..., ArgumentParser]) -> None:
-    parser = setup_common_args(create_parser(
-        'collect', help='メッセージを収集しデータベースに格納します'))
-    parser.add_argument(
-        '--token',
-        help='APIトークンを指定します。省略した場合はTOKEN環境変数の値が利用されます。')
+    parser = setup_token_args(setup_common_args(create_parser(
+        'collect', help='メッセージを収集しデータベースに格納します')))
     parser.add_argument(
         '--since', help='メッセージ取得開始日時(ISO8601)を指定します。'
         '省略した場合はDBに保存されている最新のメッセージ以降を取得対象とします。',
@@ -32,15 +28,7 @@ def init_argparser(create_parser: Callable[..., ArgumentParser]) -> None:
 
 
 def run(args: Namespace) -> None:
-    # 引数または環境変数よりTokenを取得してSlack WebClientを初期化
-    token = args.token or os.environ.get('TOKEN', None)
-    if not token:
-        print('--token or TOKEN environment variable required',
-              file=sys.stderr)
-        return
-    client = WebClient(token=token)
-
-    # DBコネクション初期化
+    client = create_slack_client(args)
     init_db(args.db)
 
     # 全チャンネルをスキャンするしDBにUPSERTする
@@ -75,7 +63,8 @@ def run(args: Namespace) -> None:
     for c in channels:
         if not c['is_member']:  # joinしているチャンネル以外は読み取れないのでskip
             continue
-        print('会話ログを取得中 #{} ...'.format(c['name']), end='')
+        print('会話ログを取得中 id:{} #{} ...'.format(
+            c['id'], c['name']), end='')
 
         # since/until引数が指定されていたときや無指定の場合にAPIに渡す引数を設定
         kwargs = {}
