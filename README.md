@@ -6,6 +6,13 @@
 
 * Python 3.7以降 (3.8で動作確認してます)
 * [Poetry](https://python-poetry.org/) (パッケージ管理ツール)
+* Slackにアプリを登録しトークンを得る
+   * 以下のBot Token Scopesが必要
+      * channels:history
+      * channels:read
+      * users:read
+      * users:read.email
+      * chat:write (集計結果をPostする場合)
 
 ## インストール方法
 
