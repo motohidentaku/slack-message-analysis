@@ -8,6 +8,8 @@ authors = ["Kazuki Oikawa <k@oikw.org>"]
 python = "^3.8"
 slackclient = "^2.6.0"
 sqlalchemy = "^1.3.17"
+wordcloud = "^1.7.0"
+fugashi = "^0.2.2"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.2"

@@ -13,6 +13,7 @@
       * users:read
       * users:read.email
       * chat:write (集計結果をPostする場合)
+      * files:write (ワードクラウド等、画像をPostする場合)
 
 ## インストール方法
 
@@ -86,6 +87,14 @@ $ slack-message-analysis team --post <集計結果投稿先チャンネルID> --
 ```
 
 `--team`は省略可能でその場合はカレントディレクトリの`team_master.csv`が利用されます。
+
+### ワードクラウド
+
+必須引数とオプション引数がいろいろあるのでヘルプを見て使ってね！
+
+```
+$ slack-message-analysis wordcloud --help
+```
 
 ## 開発方法
 
