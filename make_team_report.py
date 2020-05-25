@@ -1,44 +1,52 @@
+# -*- coding: utf-8 -*-
+
+"""
+    calc_monthly_team.py
+
+    月間チーム平均発言数（チーム内発言数/チームメンバの数）を計算する
+"""
+
 import pandas as pd
 import json
 import time
 import datetime
 
-df_mes = pd.read_csv('mes.csv', names=('date', 'ch', 'name', 'email', 'mes'))
-df_user = pd.read_csv('team_master.csv', names=('email', 'team'))
-df_team = df_user.groupby('team').count()
 
-#daily sum
-df_daily = (pd.merge(df_mes[~df_mes.duplicated()], df_user, on='email').groupby(['date', 'team'], as_index=False).sum())
+def main():
+    m = MonthlyTeam()
+    m.calc()    
 
-#mothly sum and team mean
-df_daily['month'] = df_daily['date'].map(lambda x:str(x)[0:7])
-df_monthly = pd.merge(df_daily.groupby(['month', 'team'], as_index=False).sum(), df_team, on='team')
-df_monthly['mean'] = df_monthly['mes']/df_monthly['email']
+class MonthlyTeam:
+    def __init__(self):
+        self.df_mes = pd.read_csv('../dummydata/mes.csv', names=('date', 'ch', 'name', 'email', 'mes'))
+        self.df_user = pd.read_csv('../dummydata/team_master.csv', names=('email', 'team', 'organization', 'position'))
 
-current_season = "{0:%Y-%m}".format(datetime.datetime.now())
+        self.file_name = '../output/MonthlyTeam.csv'
 
+    def calc(self):
+        df_team = self.df_user.groupby('team').count()
 
-leaderboard = {}
-leaderboard['current_season'] = current_season
-leaderboard['last_updated'] = int(float(time.time())*1000)
-leaderboard['trainers'] = []
-i = 1
-for index, item in df_monthly.sort_values('mean', ascending=False).iterrows():
-  leaderboard['trainers'].append({"rating": item['mean'], "members": item['email'], "name": item['team'], "leaderboard_rank": i})
-  i += 1
-#file.write(json.dumps(leaderboard))
+        #daily sum
+        df_daily = (pd.merge(self.df_mes[~self.df_mes.duplicated()], self.df_user, on='email').groupby(['date', 'team'], as_index=False).sum())
 
+        #mothly sum and team mean
+        df_daily['month'] = df_daily['date'].map(lambda x:str(x)[0:7])
+        df_monthly = pd.merge(df_daily.groupby(['month', 'team'], as_index=False).sum(), df_team, on='team')
+        df_monthly['mean'] = df_monthly['mes']/df_monthly['email']
 
-print(json.dumps(leaderboard))
+        current_season = "{0:%Y-%m}".format(datetime.datetime.now())
 
-file_name = 'gbl.get_leaderboard'
+        try:
+            file = open(self.file_name, 'w')
+            i = 1
+            for index, item in df_monthly.sort_values('mean', ascending=False).iterrows():
+                leaderboard['trainers'].append({"rating": item['mean'], "members": item['email'], "name": item['team'], "leaderboard_rank": i})
+                file.write(json.dumps(leaderboard))
+                i += 1
+         except Exception as e:
+            print(e)
+         finally:
+            file.close()
 
-try:
-  file = open(file_name, 'w')
-  file.write(json.dumps(leaderboard))
-except Exception as e:
-    print(e)
-finally:
-    file.close()
-
-
+if __name__ == "__main__":
+    main()
