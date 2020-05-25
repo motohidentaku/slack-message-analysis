@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "slack-message-analysis"
+version = "0.1.0"
+description = ""
+authors = ["Kazuki Oikawa <k@oikw.org>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+slackclient = "^2.6.0"
+sqlalchemy = "^1.3.17"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.8.2"
+mypy = "^0.770"
+sqlalchemy-stubs = "^0.3"
+yapf = "^0.30.0"
+
+[tool.poetry.scripts]
+slack-message-analysis = 'slack_message_analysis.cli:main'
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
