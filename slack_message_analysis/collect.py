@@ -1,4 +1,4 @@
-from argparse import Namespace
+from argparse import ArgumentParser, Namespace
 from functools import partial
 import os
 from typing import Any, Callable, Dict, Tuple, Union, List, TYPE_CHECKING
@@ -7,13 +7,31 @@ import sys
 from slack import WebClient
 from slack.web.slack_response import SlackResponse
 
+from .common import setup_common_args, datetime_parser
 from .models import init_db, transaction, Channel, User, Message
 
 if TYPE_CHECKING:
     from asyncio import Future
 
 
-def main(args: Namespace) -> None:
+def init_argparser(create_parser: Callable[..., ArgumentParser]) -> None:
+    parser = setup_common_args(create_parser(
+        'collect', help='メッセージを収集しデータベースに格納します'))
+    parser.add_argument(
+        '--token',
+        help='APIトークンを指定します。省略した場合はTOKEN環境変数の値が利用されます。')
+    parser.add_argument(
+        '--since', help='メッセージ取得開始日時(ISO8601)を指定します。'
+        '省略した場合はDBに保存されている最新のメッセージ以降を取得対象とします。',
+        type=datetime_parser)
+    parser.add_argument(
+        '--until', help='メッセージ取得終了日時(ISO8601)を指定します。'
+        '省略した場合はコマンド実行日の週の月曜日午前0時になります。',
+        type=datetime_parser)
+    parser.set_defaults(func=run)
+
+
+def run(args: Namespace) -> None:
     # 引数または環境変数よりTokenを取得してSlack WebClientを初期化
     token = args.token or os.environ.get('TOKEN', None)
     if not token:

@@ -59,6 +59,40 @@ $ slack-message-analysis collect --since 2020-05-25T12:23:34 --until 2020-06-01
 $ slack-message-analysis collect --until 2020-06-01T01:23:45
 ```
 
+## 開発方法
+
+### 静的チェック等
+
+```
+$ flake8 slack_message_analysis
+$ mypy -p slack_message_analysis
+```
+
+### サブコマンドの追加(分析モジュールの追加)
+
+`slack_message_analysis` ディレクトリ配下に以下の関数を持つファイルを配置する。
+
+```python
+from argparse import ArgumentParser, Namespace
+from typing import Callable
+
+from .common import setup_common_args
+
+
+def init_argparser(create_parser: Callable[..., ArgumentParser]) -> None:
+    parser = setup_common_args(create_parser(
+        'hoge', help='hogeコマンド'))
+    parser.add_argument(
+        '--fuga', help='テスト引数')
+    parser.set_defaults(func=run)
+
+def run(args: Namespace) -> None:
+    print('slack-message-analysis hogeしたときに呼び出される')
+```
+
+`parser.set_defaults(func=run)` の`func`キーワード引数に指定する関数名を変更することにより
+`run`関数は任意の名前とすることができる。
+
 # (deprecated)
 
 アプリが登録されている全チャンネルからチャネル別、ユーザ別の発言数を集計する
