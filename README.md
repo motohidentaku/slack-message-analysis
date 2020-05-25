@@ -1,4 +1,66 @@
 # slack-message-analysis
+
+アプリが登録されている全チャンネルから発言を収集し、各種集計を行う。
+
+## 事前準備
+
+* Python 3.7以降 (3.8で動作確認してます)
+* [Poetry](https://python-poetry.org/) (パッケージ管理ツール)
+
+## インストール方法
+
+```
+$ poetry install
+```
+
+## 使い方
+
+poetryのshellに入ってCLIを実行する
+
+```
+$ poetry shell
+$ slack-message-analysis --help
+```
+
+poetryのrunでCLIを実行する
+
+```
+$ poetry run slack-message-analysis --help
+```
+
+poetryでパッケージングしてpipでインストールする
+
+```
+$ poetry build
+$ pip install dist/slack_message_analysis-*.whl
+$ slack-message-analysis
+```
+
+### 発言を収集する
+
+以下の引数が利用可能です
+
+* `--token <TOKEN>`: APIトークンを指定します。省略時は`TOKEN`環境変数の値を利用します。
+  両方共設定されていない場合はエラーで終了します。
+* `--since 2020-05-25`: 2020-05-25 00:00:00らの発言を収集対象とする。
+  省略時はデータベースに保存されている最も新しい発言以降の発言を収集対象とします。
+  データベースに発言が保存されていない場合は取得可能な最も古い発言から取得します。
+* `--until 2020-05-26`: 2020-05-26 00:00:00までの発言を収集対象とする。
+  省略時は現在の週の月曜日の00:00:00までの発言を収集対象とします。
+
+既にデータベースに保存されている発言を再度取得した場合は、
+新しいデータで上書きします。
+
+```
+$ slack-message-analysis collect
+$ slack-message-analysis collect --since 2020-05-25
+$ slack-message-analysis collect --since 2020-05-25T12:23:34
+$ slack-message-analysis collect --since 2020-05-25T12:23:34 --until 2020-06-01
+$ slack-message-analysis collect --until 2020-06-01T01:23:45
+```
+
+# (deprecated)
+
 アプリが登録されている全チャンネルからチャネル別、ユーザ別の発言数を集計する
 
 ## 設定
