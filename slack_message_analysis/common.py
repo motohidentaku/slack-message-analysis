@@ -14,6 +14,9 @@ def setup_common_args(p: ArgumentParser) -> ArgumentParser:
     p.add_argument(
         '--db', default='slack.sqlite',
         help='SQLiteのパスを指定します。デフォルトはカレントディレクトリの"slack.sqlite"です')
+    p.add_argument(
+        '--base-url', default='https://api.slack.com/api/',
+        help='Slack APIのURLを指定します (デフォルト: https://api.slack.com/api/)')
     return p
 
 
@@ -66,7 +69,7 @@ def create_slack_client(args: Namespace) -> WebClient:
         print('--token or TOKEN environment variable required',
               file=sys.stderr)
         sys.exit(1)
-    return WebClient(token=token)
+    return WebClient(token=token, base_url=args.base_url)
 
 
 def get_date_range(args: Namespace) -> Tuple[datetime, datetime]:
