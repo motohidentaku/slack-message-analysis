@@ -49,7 +49,11 @@ def run(args: Namespace) -> None:
         partial(client.users_list, exclude_archived=1), 'members')
     with transaction() as s:
         for u in users:
-            name = u['profile'].get('display_name') or u['real_name']
+            name = (
+                u['profile'].get('display_name') or
+                u.get('real_name') or
+                u['profile'].get('real_name') or
+                u['name'])
             email = u['profile'].get('email')
             s.add(User(id=u['id'], name=name, email=email, raw=u))
     print('[{}]'.format('OK' if success else 'Error'))
