@@ -97,8 +97,12 @@ def run(args: Namespace) -> None:
         with transaction() as s:
             print(' {} messages '.format(len(messages)), end='')
             for m in messages:
+                user_id = m.get('user')
+                if not user_id:
+                    # ユーザIDが含まれないメッセージは収集対象外
+                    continue
                 s.add(Message(timestamp=float(m['ts']), channel_id=c['id'],
-                              user_id=m['user'], subtype=m.get('subtype', ''),
+                              user_id=user_id, subtype=m.get('subtype', ''),
                               raw=m))
         print('[OK]')
 
