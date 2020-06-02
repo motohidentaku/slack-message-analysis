@@ -1,8 +1,10 @@
 from argparse import ArgumentParser, Namespace
 from functools import partial
+import time
 from typing import Any, Callable, Dict, Tuple, Union, List, TYPE_CHECKING
 import sys
 
+from slack.errors import SlackApiError
 from slack.web.slack_response import SlackResponse
 
 from .common import (
@@ -152,6 +154,14 @@ def _fetch_all_pages(
         try:
             resp = func(**kwargs)
         except Exception as e:
+            if isinstance(e, SlackApiError):
+                if e.response["error"] == "ratelimited":
+                    delay = int(e.response.headers['Retry-After'])
+                    print('\nrate limited. retry-after {}s...'.format(delay),
+                          end='')
+                    time.sleep(delay)
+                    continue
+
             print(type(e), e, file=sys.stderr)
             return False, ret
 
