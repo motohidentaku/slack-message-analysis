@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from .common import (
     setup_common_args, setup_token_args, setup_date_range_args, post,
-    setup_post_args, get_date_range, get_date_range_str)
+    setup_post_args, get_date_range, get_date_range_str, TARGET_SUBTYPES)
 from .models import init_db, transaction, User, Message
 
 
@@ -48,7 +48,7 @@ def run(args: Namespace) -> None:
         ).filter(
             Message.timestamp >= since.timestamp(),
             Message.timestamp < until.timestamp(),
-            Message.subtype == '',
+            Message.subtype.in_(TARGET_SUBTYPES),
         ).group_by(
             Message.user_id,
         ).order_by(
