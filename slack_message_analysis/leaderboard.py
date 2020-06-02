@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from .common import (
     setup_common_args, setup_token_args, setup_date_range_args, post,
-    setup_post_args, get_date_range, get_date_range_str)
+    setup_post_args, get_date_range, get_date_range_str, TARGET_SUBTYPES)
 from .models import init_db, transaction, Channel, User, Message
 
 
@@ -42,7 +42,7 @@ def _user_posts(since: datetime, until: datetime, args: Namespace) -> None:
         ).filter(
             Message.timestamp >= since.timestamp(),
             Message.timestamp < until.timestamp(),
-            Message.subtype == '',
+            Message.subtype.in_(TARGET_SUBTYPES),
         ).group_by(
             Message.user_id,
         ).order_by(
@@ -69,7 +69,7 @@ def _channel_posts(since: datetime, until: datetime, args: Namespace) -> None:
         ).filter(
             Message.timestamp >= since.timestamp(),
             Message.timestamp < until.timestamp(),
-            Message.subtype == '',
+            Message.subtype.in_(TARGET_SUBTYPES),
         ).group_by(
             Message.channel_id,
         ).order_by(
@@ -98,7 +98,7 @@ def _reactions(since: datetime, until: datetime, args: Namespace) -> None:
         q = s.query(Message).filter(
             Message.timestamp >= since.timestamp(),
             Message.timestamp < until.timestamp(),
-            Message.subtype == '')
+            Message.subtype.in_(TARGET_SUBTYPES))
 
         for m in q:
             reactions = m.raw.get('reactions', [])

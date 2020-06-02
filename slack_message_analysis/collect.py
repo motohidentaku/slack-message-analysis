@@ -93,17 +93,43 @@ def run(args: Namespace) -> None:
             **kwargs), 'messages')
         if not success:
             print('[ERROR]')
-            break
+            return
+
+        # スレッドがあればリプライを全部収集する
+        all_replies = []
+        fetched_threads = set()
+        for m in messages:
+            thread_ts = m.get('thread_ts')
+            if not thread_ts or thread_ts in fetched_threads:
+                continue
+            fetched_threads.add(thread_ts)
+            success, replies = _fetch_all_pages(partial(
+                client.conversations_replies, channel=c['id'],
+                ts=thread_ts), 'messages')
+            if not success:
+                print('[ERROR]')
+                return
+            all_replies += replies
+
+        # スレッドの関係により重複するメッセージが含まれるので、
+        # 重複を除去する
+        insert_messages: Dict[Tuple[float, str, str, str], Message] = {}
+        for m in messages + all_replies:
+            user_id = m.get('user')
+            if not user_id:
+                # ユーザIDが含まれないメッセージは収集対象外
+                continue
+            key = (float(m['ts']), c['id'], user_id, m.get('subtype', ''))
+            tmp = Message(
+                timestamp=key[0], channel_id=key[1], user_id=user_id,
+                subtype=key[3], raw=m)
+            insert_messages[key] = tmp
+
+        # DBにUPSERT
         with transaction() as s:
-            print(' {} messages '.format(len(messages)), end='')
-            for m in messages:
-                user_id = m.get('user')
-                if not user_id:
-                    # ユーザIDが含まれないメッセージは収集対象外
-                    continue
-                s.add(Message(timestamp=float(m['ts']), channel_id=c['id'],
-                              user_id=user_id, subtype=m.get('subtype', ''),
-                              raw=m))
+            print(' {} messages '.format(len(insert_messages)), end='')
+            for im in insert_messages.values():
+                s.add(im)
         print('[OK]')
 
 

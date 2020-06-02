@@ -6,6 +6,8 @@ from typing import Tuple, Union, List, Any
 
 from slack import WebClient
 
+TARGET_SUBTYPES = ('', 'thread_broadcast')
+
 
 def setup_common_args(p: ArgumentParser) -> ArgumentParser:
     # 共通の引数を設定します.

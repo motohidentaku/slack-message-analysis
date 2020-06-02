@@ -6,7 +6,8 @@ from wordcloud import WordCloud  # type: ignore
 
 from .common import (
     setup_common_args, setup_token_args, setup_date_range_args,
-    setup_post_args, get_date_range, get_date_range_str, create_slack_client)
+    setup_post_args, get_date_range, get_date_range_str, create_slack_client,
+    TARGET_SUBTYPES)
 from .models import init_db, transaction, Message
 
 
@@ -84,7 +85,7 @@ def run(args: Namespace) -> None:
         q = s.query(Message).filter(
             Message.timestamp >= since.timestamp(),
             Message.timestamp < until.timestamp(),
-            Message.subtype == '',
+            Message.subtype.in_(TARGET_SUBTYPES),
         )
         for m in q:
             if m.raw.get('bot_id'):
