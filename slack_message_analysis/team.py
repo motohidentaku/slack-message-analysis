@@ -51,9 +51,7 @@ def run(args: Namespace) -> None:
             Message.subtype.in_(TARGET_SUBTYPES),
         ).group_by(
             Message.user_id,
-        ).order_by(
-            func.count(Message.user_id).desc(),
-        ).limit(args.n).subquery()
+        ).subquery()
         q = s.query(sq.c.count, User.email).join(User, sq.c.user_id == User.id)
 
         for count, email in q:
