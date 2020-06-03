@@ -34,21 +34,32 @@ def run(args: Namespace) -> None:
     init_db(args.db)
 
     # 全チャンネルをスキャンするしDBにUPSERTする
-    print('チャンネル一覧を取得中...', end='')
+    #
+    # https://api.slack.com/methods/conversations.list
+    # "We recommend no more than 200 results at a time."
+    # よりlimitに200を指定する (デフォルトは100)
+    print('チャンネル一覧を取得中 ', end='')
     success, channels = _fetch_all_pages(
-        partial(client.conversations_list, exclude_archived=1), 'channels')
+        partial(client.conversations_list, exclude_archived=1, limit=200),
+        'channels')
     with transaction() as s:
         for c in channels:
             s.add(Channel(id=c['id'], name=c['name'], is_member=c['is_member'],
                           raw=c))
-    print('[{}]'.format('OK' if success else 'Error'))
-    if not success:
+    if success:
+        print(' Found {} channels'.format(len(channels)))
+    else:
+        print('[ERROR]')
         return
 
     # 全ユーザをスキャンしDBにUPSERTする
-    print('ユーザ一覧を取得中...', end='')
+    #
+    # https://api.slack.com/methods/users.list
+    # "We recommend no more than 200 results at a time."
+    # よりlimitに200を指定する (デフォルトは0と記載があり謎)
+    print('ユーザ一覧を取得中 ', end='')
     success, users = _fetch_all_pages(
-        partial(client.users_list, exclude_archived=1), 'members')
+        partial(client.users_list, limit=200), 'members')
     with transaction() as s:
         for u in users:
             name = (
@@ -58,8 +69,10 @@ def run(args: Namespace) -> None:
                 u['name'])
             email = u['profile'].get('email')
             s.add(User(id=u['id'], name=name, email=email, raw=u))
-    print('[{}]'.format('OK' if success else 'Error'))
-    if not success:
+    if success:
+        print(' Found {} users'.format(len(users)))
+    else:
+        print('[ERROR]')
         return
 
     def _ts_tostring(ts: float) -> str:
@@ -69,7 +82,7 @@ def run(args: Namespace) -> None:
     for c in channels:
         if not c['is_member']:  # joinしているチャンネル以外は読み取れないのでskip
             continue
-        print('会話ログを取得中 id:{} #{} ...'.format(
+        print('会話ログを取得中 id:{} #{} '.format(
             c['id'], c['name']), end='')
 
         # since/until引数が指定されていたときや無指定の場合にAPIに渡す引数を設定
@@ -90,8 +103,12 @@ def run(args: Namespace) -> None:
 
         # 会話ログを取得しDBをにUPSERT。
         # 会話ログは降順で得られるので失敗時はDB登録せずに終える。
+        #
+        # https://api.slack.com/methods/conversations.history
+        # "We recommend no more than 200 results at a time."
+        # よりlimitに200を指定する (デフォルトは100)
         success, messages = _fetch_all_pages(partial(
-            client.conversations_history, channel=c['id'],
+            client.conversations_history, channel=c['id'], limit=200,
             **kwargs), 'messages')
         if not success:
             print('[ERROR]')
@@ -105,9 +122,13 @@ def run(args: Namespace) -> None:
             if not thread_ts or thread_ts in fetched_threads:
                 continue
             fetched_threads.add(thread_ts)
+            #
+            # https://api.slack.com/methods/conversations.replies
+            # "We recommend no more than 200 results at a time."
+            # よりlimitに200を指定する (デフォルトは10)
             success, replies = _fetch_all_pages(partial(
                 client.conversations_replies, channel=c['id'],
-                ts=thread_ts), 'messages')
+                ts=thread_ts, limit=200), 'messages')
             if not success:
                 print('[ERROR]')
                 return
@@ -153,11 +174,12 @@ def _fetch_all_pages(
     while True:
         try:
             resp = func(**kwargs)
+            print('.', end='')
         except Exception as e:
             if isinstance(e, SlackApiError):
                 if e.response["error"] == "ratelimited":
                     delay = int(e.response.headers['Retry-After'])
-                    print('\nrate limited. retry-after {}s...'.format(delay),
+                    print('\nrate limited. retry-after {}s\n'.format(delay),
                           end='')
                     time.sleep(delay)
                     continue
