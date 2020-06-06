@@ -1,6 +1,8 @@
 from argparse import ArgumentParser, Namespace
 import csv
 from dataclasses import dataclass
+import json
+import time
 from typing import Any, Callable, Dict
 
 from sqlalchemy import func
@@ -26,6 +28,8 @@ def init_argparser(create_parser: Callable[..., ArgumentParser]) -> None:
         '--team',
         default='team_master.csv',
         help='メンバとチームを定義づけたCSVファイル')
+    parser.add_argument(
+        '--json', help='JSON形式で結果を出力します')
     parser.set_defaults(func=run)
 
 
@@ -77,6 +81,7 @@ def run(args: Namespace) -> None:
 
     output = ['{} のチーム発言数ランキング'.format(
         get_date_range_str(since, until, args))]
+    output_json = []
     for i, t in enumerate(leaderboard):
         inactive = ''
         if t.active_members < t.total_members:
@@ -87,8 +92,27 @@ def run(args: Namespace) -> None:
             '{} members{}'.format(
                 i + 1, t.name, t.total_posts, t.total_posts / t.total_members,
                 t.total_members, inactive))
+        output_json.append({
+            'leaderboard_rank': i + 1,
+            'name': t.name,
+            'rating': t.total_posts / t.total_members,
+            'members': t.total_members,
+            'inactive_members': t.total_members - t.active_members,
+        })
     print('\n'.join(output))
     print()
+
+    if args.json:
+        if args.month or args.this_month:
+            current_season: Any = '{:%Y-%m}'.format(since)
+        else:
+            current_season = {'since': '{:%Y-%m-%d}'.format(since),
+                              'until': '{:%Y-%m-%d}'.format(until)}
+        with open(args.json, 'w', encoding='utf8') as f:
+            json.dump({
+                'current_season': current_season,
+                'last_updated': int(time.time() * 1000),
+                'teams': output_json}, f, ensure_ascii=False, indent=2)
 
     if not args.dry_run and len(output) > 1:
         post(args, '\n'.join(output))
