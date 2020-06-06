@@ -95,7 +95,7 @@ def run(args: Namespace) -> None:
         output_json.append({
             'leaderboard_rank': i + 1,
             'name': t.name,
-            'rating': t.total_posts / t.total_members,
+            'rating': "{0:.1f}".format(t.total_posts / t.total_members),
             'members': t.total_members,
             'inactive_members': t.total_members - t.active_members,
         })
