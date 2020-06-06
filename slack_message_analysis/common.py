@@ -46,7 +46,10 @@ def setup_date_range_args(p: ArgumentParser) -> ArgumentParser:
         help='先週の投稿を集計対象とします')
     p.add_argument(
         '--month', action='store_true',
-        help='先週の投稿を集計対象とします')
+        help='先月の投稿を集計対象とします')
+    p.add_argument(
+        '--this-month', action='store_true',
+        help='今月の投稿を集計対象とします')
     return p
 
 
@@ -87,6 +90,9 @@ def get_date_range(args: Namespace) -> Tuple[datetime, datetime]:
         until = datetime(year=today.year, month=today.month, day=1)
         tmp = until - timedelta(days=1)
         since = datetime(year=tmp.year, month=tmp.month, day=1)
+    elif args.this_month:
+        since = datetime(year=today.year, month=today.month, day=1)
+        until = datetime(year=today.year, month=today.month, day=today.day)
     else:
         if not (args.since and args.until):
             print('集計日時の範囲指定が必要です', file=sys.stderr)
@@ -104,6 +110,10 @@ def get_date_range_str(
         return '昨日'
     if args.week:
         return '先週'
+    if args.month:
+        return '先月'
+    if args.this_month:
+        return '今月'
     if (until - since).days == 1:
         return since.date().isoformat()
     return '{}〜{}'.format(
