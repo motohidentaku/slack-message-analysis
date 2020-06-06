@@ -1,6 +1,7 @@
 from argparse import ArgumentParser, Namespace
 import csv
-from typing import Callable, Counter
+from dataclasses import dataclass
+from typing import Any, Callable, Dict
 
 from sqlalchemy import func
 
@@ -17,10 +18,10 @@ def init_argparser(create_parser: Callable[..., ArgumentParser]) -> None:
             '--sinceと--until または --day または --week または --month を指定する必要があります。'
         )))))
     parser.add_argument(
-        '-n',
-        default=10,
-        help='上位何位まで表示するかを指定します。(デフォルト: 10位)',
-        type=int)
+        '--sort',
+        choices=['total', 'average'],
+        default='average',
+        help='順位の付け方を指定します。デフォルトは平均投稿数(合計投稿数÷所属メンバ数)です。')
     parser.add_argument(
         '--team',
         default='team_master.csv',
@@ -33,14 +34,17 @@ def run(args: Namespace) -> None:
     since, until = get_date_range(args)
 
     # CSVを読み込みユーザ(e-mail)とチーム名のマッピングを取得する
+    teams: Dict[str, TeamSummary] = {}
     team_master = {}
     with open(args.team, newline='', encoding='utf8') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         next(reader)  # skip header
         for email, team_name, _, _ in reader:
             team_master[email] = team_name
+            if team_name not in teams:
+                teams[team_name] = TeamSummary(name=team_name)
+            teams[team_name].total_members += 1
 
-    team_posts = Counter[str]()
     with transaction() as s:
         sq = s.query(
             Message.user_id.label('user_id'),
@@ -55,17 +59,44 @@ def run(args: Namespace) -> None:
         q = s.query(sq.c.count, User.email).join(User, sq.c.user_id == User.id)
 
         for count, email in q:
-            tmp = team_master.get(email)
-            if tmp is None:
+            t = teams.get(team_master.get(email))  # type: ignore
+            if t is None:
                 continue
-            team_posts[tmp] += count
+            t.total_posts += count
+            t.active_members += 1
+
+    if args.sort == 'total':
+        def _sort_key(x: 'TeamSummary') -> Any:
+            return x.total_posts
+    elif args.sort == 'average':
+        def _sort_key(x: 'TeamSummary') -> Any:
+            return x.total_posts / x.total_members
+    else:
+        assert(False)
+    leaderboard = sorted(teams.values(), key=_sort_key, reverse=True)
 
     output = ['{} のチーム発言数ランキング'.format(
         get_date_range_str(since, until, args))]
-    for i, (name, count) in enumerate(team_posts.most_common(args.n)):
-        output.append('{}. {} ({} posts)'.format(i + 1, name, count))
+    for i, t in enumerate(leaderboard):
+        inactive = ''
+        if t.active_members < t.total_members:
+            inactive = ' ({} inactive)'.format(
+                t.total_members - t.active_members)
+        output.append(
+            '{}. {}: {} posts, {:.2f} posts/member, '
+            '{} members{}'.format(
+                i + 1, t.name, t.total_posts, t.total_posts / t.total_members,
+                t.total_members, inactive))
     print('\n'.join(output))
     print()
 
     if not args.dry_run and len(output) > 1:
         post(args, '\n'.join(output))
+
+
+@dataclass
+class TeamSummary:
+    name: str
+    total_posts: int = 0
+    total_members: int = 0
+    active_members: int = 0
